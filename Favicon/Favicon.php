@@ -10,10 +10,10 @@
 namespace WS;
 
 // Load log class
-require_once dirname(__FILE__) . 'Log.php';
+require_once dirname(__FILE__) . '/Log.php';
 
 // Load cache adapter
-require_once dirname(__FILE__) . 'Cache.php';
+require_once dirname(__FILE__) . '/Cache.php';
 
 
 /**
@@ -38,41 +38,34 @@ class Favicon {
 
     /**
      * 保存传入的参数,其中:
-     * Save all input params, include:
      *
      * 	origin_url:  	 保存传入的url参数的原始字符串信息
-     *                  (the origin input url)
+     *
      *  	expire:		项目的过期时间,经int转化后的expire参数
-     *                  (Cache expired time)
      *
      *  以及一些额外的参数及暂存的数据
-     *  and other extra params if needed
      */
     private $params = array();
 
 
     /**
      * 经parse_url解析后的URL数组
-     * the url array after parse_url()
      */
     private $parsed_url = array();
 
     /**
      * 完整的形如  http://xxx.xxx.com:8888 这样的地址
-     * the full host, such as http://xxx.xxx.com:8888
      */
     private $full_host = '';
 
     /**
      * 保存图标在缓存中保存的KEY的名称
      * 一般应等于full_host
-     * cache KEY name of memcache or redis
      */
     private $cache_key = '';
 
     /**
      * 包含获取到的最终的二进制数据
-     * the final binary icon data
      *
      */
     private $data = NULL;
@@ -159,11 +152,6 @@ class Favicon {
          * 内检测过期时间是否小于等于0（0值将意味着缓存永久有效）
          * 以及缓存时间是否过大
          *
-         * expired time
-         * if you let users set the expire by url params, may you will
-         * need to check the expire time by youselves.
-         * such as if expire time <= 0 ( 0 means cache will save forever),
-         * and if expire time so long ~ (999 years or longer~ )
          *
          */
         $this->params['expire'] = $expire;

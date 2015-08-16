@@ -28,10 +28,10 @@ class Cache {
          * connect to Redis
          */
         if ( ! extension_loaded('redis')){
-            throw new WS_Exception('\WS\Cache: The redis Extension must be loaded to use Redis Cache.');
+            trigger_error('\WS\Cache: The redis Extension must be loaded to use Redis Cache.', E_ERROR);
         }
 
-        $this->_redis = new Redis();
+        $this->_redis = new \Redis();
         $this->_redis->connect($this->redis_conf['host'], $this->redis_conf['port']);
 
         $this->_redis->select($this->redis_conf['db']);
