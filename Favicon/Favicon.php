@@ -12,25 +12,17 @@ namespace WS;
 // Load log class
 require_once dirname(__FILE__) . '/Log.php';
 
-// Load cache adapter
-require_once dirname(__FILE__) . '/Cache.php';
-
 
 /**
- * Favicon操作类
+ * Favicon 获取类
  *
  * ## 关于缓存:
- * 程序中同时使用文件缓存和Memcache缓存两种方案,程序获取图标时
- * ### Memcache缓存
- * 会优先从Memcache缓存中获取数据, 缓存Key的格式为 HOST[:PORT],
- * 带有尺寸信息的缓存格式为 HOST[:PORT]__{s|f}SIZE
- *  (尺寸的数字前面加两个下划线,还有一个表示size或fzoom的字母,即s或f)
- *  ### 文件缓存
- * 文件缓存用来永久保存那些被墙或打开速度奇慢的网站的图标,并在HOOK中维
- * 护一个这些网站的列表和映射关系
- *
+ * 本来类库中是调用Redis来做缓存，后来想了下，还是让这个类只专注于自己的业
+ * 务吧（获取图标）缓存这些操作交给外部来处理
  *
  * @author jerry
+ *
+ * @link http://blog.icewingcc.com
  *
  */
 
@@ -41,17 +33,10 @@ class Favicon {
      *
      * 	origin_url:  	 保存传入的url参数的原始字符串信息
      *
-     *  	expire:		项目的过期时间,经int转化后的expire参数
      *
      *  以及一些额外的参数及暂存的数据
      */
     private $params = array();
-
-
-    /**
-     * 经parse_url解析后的URL数组
-     */
-    private $parsed_url = array();
 
     /**
      * 完整的形如  http://xxx.xxx.com:8888 这样的地址
@@ -59,21 +44,10 @@ class Favicon {
     private $full_host = '';
 
     /**
-     * 保存图标在缓存中保存的KEY的名称
-     * 一般应等于full_host
-     */
-    private $cache_key = '';
-
-    /**
      * 包含获取到的最终的二进制数据
      *
      */
     private $data = NULL;
-
-    /**
-     * cache
-     */
-    private $_cache;
 
     /**
      * 预定义的网址匹配与图标文件的映射关系
@@ -109,7 +83,10 @@ class Favicon {
 
 
     public function __construct(){
-        $this->_cache = &Cache::get_instance();
+        /**
+         * 设置记录日志的内容
+         */
+        Log::set_log_level(Log::LOG_DEBUG | Log::LOG_ERROR | Log::LOG_INFO);
     }
 
 
@@ -119,17 +96,18 @@ class Favicon {
      *
      * @param string $url 输入的网址
      *                  (The input URL)
-     * @param int $expire 缓存过期的时间，默认是10天
-     *                  (Cache expire time, 10 days default)
+     * @param bool $return 是要求返回二进制内容还是直接显示它
+     * @return string 
      *
      */
-    function get_favicon($url = '', $expire = 8640000){
+    function get_favicon($url = '', $return = TRUE){
 
         /**
          * 验证传入参数
          * Validate the input params
          */
         if( ! $url){
+            Log::log_message(Log::LOG_ERROR, 'Url cannot be empty, ' . $url);
             trigger_error('\WS\Favicon: Url cannot be empty', E_ERROR);
         }
 
@@ -139,22 +117,17 @@ class Favicon {
         //解析URL参数
         $ret = $this->parse_url_host($url);
         if(! $ret){
+            Log::log_message(Log::LOG_ERROR, 'Invalidate url, ' . $url);
             trigger_error('WS\Favicon: Invalided url', E_WARNING);
         }
 
-
-        //额外保存一份cache_key的值，用于被插件重写以获得准确的缓存数据
-        $this->cache_key = $this->full_host;
-
         /**
-         * 过期时间
-         * 如果是通URL传参的形式设定过期时间，可能需要自行在入口函数
-         * 内检测过期时间是否小于等于0（0值将意味着缓存永久有效）
-         * 以及缓存时间是否过大
-         *
-         *
+         * 开始获取图标过程
          */
-        $this->params['expire'] = $expire;
+        $time_start = microtime(TRUE);
+        var_dump($time_start);
+
+        Log::log_message(Log::LOG_DEBUG, 'Begin to get icon, ' . $url);
 
 
         /**
@@ -163,26 +136,40 @@ class Favicon {
         $data = $this->get_data();
 
         /**
+         * 获取过程结束
+         */
+        $time_end = microtime(TRUE);
+        $time_spend = $time_end - $time_start;
+
+        $memory_usage = (( ! function_exists('memory_get_usage')) ? '0' : round(memory_get_usage()/1024/1024, 2)) .'MB';
+
+        Log::log_message(Log::LOG_DEBUG, 'Get icon complate, spent time ' . $time_spend . 's, Memory_usage ' . $memory_usage);
+
+        /**
          * 设置输出Header信息
          * Output common header
          *
          * @since V2.1.4 2015-02-09
          */
-        header('X-Powered-By: jerry@icewingcc.com', TRUE);
-        header('X-Robots-Tag: noindex, nofollow');
-//        header('X-Total-Time: ' . $this->benchmark->elapsed_time('total_execution_time_start', 'mark_now'));
-        header('X-Memory-Usage: ' . (( ! function_exists('memory_get_usage')) ? '0' : round(memory_get_usage()/1024/1024, 2)) .'MB');
+        if($return){
+            return $data;
+        }
 
-        if($data){
-            header('Content-type: image/x-icon');
-            echo $data;
-        } else {
-            header('Content-type: application/json');
-            echo json_encode(array('status'=>-1, 'msg'=>'Unknown Error'));
+        else {
+            header('X-Powered-By: jerry@icewingcc.com', TRUE);
+            header('X-Robots-Tag: noindex, nofollow');
+            header('X-Memory-Usage: ' . $memory_usage);
+
+            if($data){
+                header('Content-type: image/x-icon');
+                echo $data;
+            } else {
+                header('Content-type: application/json');
+                echo json_encode(array('status'=>-1, 'msg'=>'Unknown Error'));
+            }
         }
 
     }
-
 
 
     //-------------------------------------------------------------------------------------------------
@@ -190,25 +177,17 @@ class Favicon {
      * 获取最终的Favicon图标数据
      * 此为该类获取图标的核心函数
      */
-    function get_data(){
-
-        //从缓存中获取保存的内容,如果缓存中有指定的内容就返回
-        //否则需要执行从网络获取的过程
-
-        if( $this->_get_data_from_cache())
-            return $this->data;
-
+    protected function get_data(){
 
         /**
-         * 插件入口: favicon_after_get_cache
-         * 用于通过Filter方式获取data,以覆盖后面获取的内容
-         * @since Version 2.0; Date 2014-10-05
+         * 处理一些预定义的“无法打开”的网站
+         *
          */
-        //  处理被墙网址
         $this->favicon_x_static_icons();
 
         //判断data中有没有来自插件写入的内容
         if( $this->data != NULL){
+            Log::log_message(Log::LOG_INFO, 'Get icon from static file cache, ' . $this->full_host);
             return $this->data;
         }
 
@@ -221,14 +200,20 @@ class Favicon {
 
             //匹配完整的LINK标签，再从LINK标签中获取HREF的值
             if(@preg_match('/(<link.*?rel=.(icon|shortcut icon|alternate icon).*?>)/i', $html['data'], $match_tag)){
+
                 if(isset($match_tag[1]) && $match_tag[1] && @preg_match('/href=(\'|\")(.*?)\1/i', $match_tag[1], $match_url)){
+
                     if(isset($match_url[2]) && $match_url[2]){
+
                         //解析HTML中的相对URL 路径
                         $match_url[2] = $this->filter_relative_url(trim($match_url[2]), $this->params['origin_url']);
 
                         $icon = $this->get_file($match_url[2]);
+
                         if($icon && $icon['status'] == 'OK'){
-                            Log::log_message("Success get icon from {$this->params['origin_url']}, icon url is {$match_url[2]}");
+
+                            Log::log_message(Log::LOG_INFO, "Success get icon from {$this->params['origin_url']}, icon url is {$match_url[2]}");
+
                             $this->data = $icon['data'];
                         }
                     }
@@ -246,17 +231,21 @@ class Favicon {
         //未能从LINK标签中获取图标（可能是网址无法打开，或者指定的文件无法打开，或未定义图标地址）
         //将使用网站根目录的文件代替
         $data = $this->get_file($this->full_host . '/favicon.ico');
+
         if($data && $data['status'] == 'OK'){
-            Log::log_message("Success get icon from website root: {$this->full_host}/favicon.ico");
+            Log::log_message(Log::LOG_INFO, "Success get icon from website root: {$this->full_host}/favicon.ico");
             $this->data = $data['data'];
+
         } else {
             //如果直接取根目录文件返回了301或404，先读取重定向，再从重定向的网址获取
             $ret = $this->parse_url_host($redirected_url);
+
             if($ret){
                 //最后的尝试，从重定向后的网址根目录获取favicon文件
                 $data = $this->get_file($this->full_host . '/favicon.ico');
+
                 if($data && $data['status'] == 'OK'){
-                    Log::log_message("Success get icon from redirect file: {$this->full_host}/favicon.ico");
+                    Log::log_message(Log::LOG_INFO, "Success get icon from redirect file: {$this->full_host}/favicon.ico");
                     $this->data = $data['data'];
                 }
 
@@ -266,56 +255,16 @@ class Favicon {
 
         if($this->data == NULL){
             //各个方法都试过了，还是获取不到。。。
-            Log::log_message("Cannot get icon from {$this->params['origin_url']}");
-            $this->data = @file_get_contents(FCPATH . 'static/favicon/default.png');
+            // 返回默认文件
+            Log::log_message(Log::LOG_ERROR, "Cannot get icon from {$this->params['origin_url']}");
+            $this->data = @file_get_contents(dirname(__FILE__) . '/icons/default.png');
         }
-
-        $this->_save_data_into_cache();
 
         return $this->data;
     }
 
-    //-------------------------------------------------------------------------------------------------
 
-    /**
-     * 从memcache缓存中获取图标资源
-     * 并在成功获取后设置$this->data的值,并返回TRUE
-     * 否则返回FALSE
-     * @return boolean
-     */
-    private function _get_data_from_cache(){
-        //从缓存中获取保存的内容
-        $data = $this->_cache->get($this->cache_key);
-        if($data){
-            $this->data = $data;
-            return TRUE;
-        } else{
-            if($this->cache_key != $this->full_host){
-                //在找不到指定的图标缓存时尝试获取原始图标的缓存副本
-                //但是这里取得的缓存内容可能需要加以处理才可以使用
-                $data = $this->_cache->get($this->full_host);
-                if($data){
-                    $this->data = $data;
 
-                    return TRUE;
-                } else {
-                    return FALSE;
-                }
-            } else {
-                return FALSE;
-            }
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    /**
-     * 把当前的内容保存到缓存中
-     */
-    private function _save_data_into_cache(){
-        //保存新数据
-        return $this->_cache->save($this->cache_key, $this->data, $this->params['expire']);
-    }
 
 
     //-------------------------------------------------------------------------------------------------
@@ -324,41 +273,34 @@ class Favicon {
      * 解析一个完整的URL中并返回其中的协议、域名和端口部分
      * 同时会设置类中的parsed_url和full_host属性
      *
-     * Parse a full URL and return their parts,
-     * and will set $this->parsed_url And $this->full_host at same time
      */
     private function parse_url_host($url){
         /**
          * 尝试解析URL参数，如果解析失败的话再加上http前缀重新尝试解析
          *
-         * Try to parse url params,
-         * if failed, append the http prefix and retry
          */
-        $this->parsed_url = parse_url($url);
+        $parsed_url = parse_url($url);
 
-        if( ! isset($this->parsed_url['host']) || !$this->parsed_url['host']){
+        if( ! isset($parsed_url['host']) || ! $parsed_url['host']){
             //在URL的前面加上http://
             // add the prefix
             if ( ! preg_match('/^https?:\/\/.*/', $url))
                 $url = 'http://' . $url;
             //解析URL并将结果保存到 $this->url
             // save parsed result into $this->url
-            $this->parsed_url  = parse_url($url);
+            $parsed_url  = parse_url($url);
 
-            if($this->parsed_url == FALSE){
+            if($parsed_url == FALSE){
                 return FALSE;
             } else {
                 /**
                  * 能成功解析的话就可以设置原始URL为这个添加过http://前缀的URL
-                 *
-                 * if we can parse the url, then we can set $this->params['origin_url']
-                 * to the full url
                  */
                 $this->params['origin_url'] = $url;
             }
         }
 
-        $this->full_host = $this->parsed_url['scheme'] . '://' . $this->parsed_url['host'] . (isset($this->parsed_url['port']) ? ':' . $this->parsed_url['port'] : '');
+        $this->full_host = (isset($parsed_url['scheme']) ? $parsed_url['scheme'] : 'http') . '://' . $parsed_url['host'] . (isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '');
         return $this->full_host;
     }
 
@@ -366,9 +308,12 @@ class Favicon {
 
     /**
      * 把从HTML源码中获取的相对路径转换成绝对路径
+     *
+     * @see 函数详情： http://blog.icewingcc.com/php-conv-addr-re-ab-2.html
+     *
      * @param string $url HTML中获取的网址
      * @param string $URI 用来参考判断的原始地址
-     * @return 返回修改过的网址
+     * @return string 返回修改过的网址
      */
     private function filter_relative_url($url, $URI = ''){
         //STEP1: 先去判断URL中是否包含协议，如果包含说明是绝对地址则可以原样返回
@@ -536,7 +481,7 @@ class Favicon {
         //用当前Full_host循环匹配上面的网址，并在成功匹配后返回该网址的图标
         foreach (self::$_static_icon_list as $key => $val){
             if(preg_match('/' . $key . '(:\d+)?$/i', $this->full_host)){
-                $path = dirname(__FILE__) . 'icons/' . $val;
+                $path = dirname(__FILE__) . '/icons/' . $val;
                 if(file_exists($path)){
                     $this->data = @file_get_contents($path);
                     return TRUE;

@@ -29,4 +29,47 @@ $expire = isset($_GET['expire']) ? intval($_GET['expire']) : 864000;
 if($expire < 600)
     $expire = 600;
 
-$favicon->get_favicon($url, 60);
+ echo $favicon->get_favicon($url,false);
+
+
+//-------------------------------------------------------------------------------------------------
+
+/**
+ * 把当前的内容保存到缓存中
+ */
+function _save_data_into_cache(){
+    //保存新数据
+    return $this->_cache->save($this->cache_key, $this->data, $this->params['expire']);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+/**
+ * 从memcache缓存中获取图标资源
+ * 并在成功获取后设置$this->data的值,并返回TRUE
+ * 否则返回FALSE
+ * @return boolean
+ */
+function _get_data_from_cache(){
+    //从缓存中获取保存的内容
+    $data = $this->_cache->get($this->cache_key);
+    if($data){
+        $this->data = $data;
+        return TRUE;
+    } else{
+        if($this->cache_key != $this->full_host){
+            //在找不到指定的图标缓存时尝试获取原始图标的缓存副本
+            //但是这里取得的缓存内容可能需要加以处理才可以使用
+            $data = $this->_cache->get($this->full_host);
+            if($data){
+                $this->data = $data;
+
+                return TRUE;
+            } else {
+                return FALSE;
+            }
+        } else {
+            return FALSE;
+        }
+    }
+}
