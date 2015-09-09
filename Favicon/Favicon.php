@@ -97,7 +97,7 @@ class Favicon {
      * @param string $url 输入的网址
      *                  (The input URL)
      * @param bool $return 是要求返回二进制内容还是直接显示它
-     * @return string 
+     * @return string
      *
      */
     function get_favicon($url = '', $return = TRUE){
@@ -125,7 +125,6 @@ class Favicon {
          * 开始获取图标过程
          */
         $time_start = microtime(TRUE);
-        var_dump($time_start);
 
         Log::log_message(Log::LOG_DEBUG, 'Begin to get icon, ' . $url);
 
