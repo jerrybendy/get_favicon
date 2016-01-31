@@ -162,6 +162,13 @@ class Favicon
 
         if ($html && $html['status'] == 'OK') {
 
+            /*
+             * 2016-01-31
+             * FIX #1
+             * 对取到的HTML内容进行删除换行符的处理,避免link信息折行导致的正则匹配失败
+             */
+            $html = str_replace(array("\n", "\r"), '', $html);
+
             //匹配完整的LINK标签，再从LINK标签中获取HREF的值
             if (@preg_match('/(<link.*?rel=.(icon|shortcut icon|alternate icon).*?>)/i', $html['data'], $match_tag)) {
 
