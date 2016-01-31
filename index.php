@@ -12,7 +12,7 @@ require dirname(__FILE__) . '/Favicon/Favicon.php';
 
 //error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT & ~E_USER_NOTICE & ~E_USER_DEPRECATED);
 
-$favicon = new \WS\Favicon();
+$favicon = new \Jerrybendy\Favicon();
 
 /**
  * 检测URL参数

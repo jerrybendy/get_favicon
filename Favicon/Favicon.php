@@ -7,7 +7,7 @@
  * @version 2.0
  */
 
-namespace WS;
+namespace Jerrybendy;
 
 // Load log class
 require_once dirname(__FILE__) . '/Log.php';
@@ -20,7 +20,7 @@ require_once dirname(__FILE__) . '/Log.php';
  * 本来类库中是调用Redis来做缓存，后来想了下，还是让这个类只专注于自己的业
  * 务吧（获取图标）缓存这些操作交给外部来处理
  *
- * @author jerry
+ * @author Jerry Bendy
  *
  * @link http://blog.icewingcc.com
  *

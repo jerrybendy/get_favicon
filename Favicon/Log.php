@@ -6,7 +6,7 @@
  * Time: 0:30
  */
 
-namespace WS;
+namespace Jerrybendy;
 
 
 class Log {
