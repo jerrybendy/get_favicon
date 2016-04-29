@@ -1,0 +1,27 @@
+{
+    "name": "jerrybendy/get-favicon",
+    "description": "An easy way to get website favicon image with php",
+    "keywords": ["favicon"],
+    "homepage": "https://github.com/jerrybendy/get_favicon",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jerry Bendy",
+            "email": "jerry@icewingcc.com",
+            "homepage": "http://blog.icewingcc.com"
+        }
+    ],
+    "support": {
+        "email": "jerry@icewingcc.com",
+        "issues": "https://github.com/jerrybendy/get_favicon/issues",
+        "wiki": "https://github.com/jerrybendy/get_favicon/wiki"
+    },
+    "require": {
+        "php": ">=5.3.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "Jerrybendy\\Favicon\\": "src/"
+        }
+    }
+}

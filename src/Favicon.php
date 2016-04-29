@@ -5,10 +5,10 @@
  * @author    Jerry Bendy (jerry@icewingcc.com)
  * @date      2014-09-10
  * @link      http://blog.icewingcc.com
- * @version   2.0
+ * @version   2.1.0
  */
 
-namespace Jerrybendy;
+namespace Jerrybendy\Favicon;
 
 
 /**
@@ -50,12 +50,14 @@ class Favicon
 
     /**
      * 最后一次请求花费的时间
+     *
      * @var double
      */
     private $_last_time_spend = 0;
 
     /**
      * 最后一次请求消耗的内存
+     *
      * @var string
      */
     private $_last_memory_usage = 0;
@@ -124,11 +126,13 @@ class Favicon
             return $data;
 
         } else {
-            header('X-Powered-By: jerry@icewingcc.com', TRUE);
-            header('X-Robots-Tag: noindex, nofollow');
 
             if ($data) {
-                header('Content-type: image/x-icon');
+
+                foreach ($this->getHeader() as $header) {
+                    @header($header);
+                }
+
                 echo $data;
 
             } else {
@@ -137,6 +141,22 @@ class Favicon
             }
         }
 
+        return null;
+    }
+
+
+    /**
+     * 获取输出 header
+     *
+     * @since v2.1
+     * @return array
+     */
+    public function getHeader()
+    {
+        return array(
+            'X-Robots-Tag: noindex, nofollow',
+            'Content-type: image/x-icon'
+        );
     }
 
 
@@ -170,7 +190,7 @@ class Favicon
             $html = str_replace(array("\n", "\r"), '', $html);
 
             //匹配完整的LINK标签，再从LINK标签中获取HREF的值
-            if (@preg_match('/(<link.*?rel=.(icon|shortcut icon|alternate icon).*?>)/i', $html['data'], $match_tag)) {
+            if (@preg_match('/((<link[^>]+rel=.(icon|shortcut icon|alternate icon)[^>]+>))/i', $html['data'], $match_tag)) {
 
                 if (isset($match_tag[1]) && $match_tag[1] && @preg_match('/href=(\'|\")(.*?)\1/i', $match_tag[1], $match_url)) {
 
@@ -244,6 +264,8 @@ class Favicon
      * 解析一个完整的URL中并返回其中的协议、域名和端口部分
      * 同时会设置类中的parsed_url和full_host属性
      *
+     * @param $url
+     * @return bool|string
      */
     private function parse_url_host($url)
     {

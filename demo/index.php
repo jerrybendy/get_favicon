@@ -11,10 +11,11 @@
  * Time: 8:04
  */
 
-require dirname(__FILE__) . '/Jerrybendy/Favicon/Favicon.php';
+
+require "../vendor/autoload.php";
 
 
-$favicon = new \Jerrybendy\Favicon();
+$favicon = new \Jerrybendy\Favicon\Favicon;
 
 
 /**
@@ -26,4 +27,4 @@ $url = $_GET['url'];
 /**
  * 获取图标并显示在浏览器上
  */
-$favicon->get_favicon($url, FALSE);
+$favicon->get_favicon($url, false);

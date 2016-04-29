@@ -1,26 +1,48 @@
-# PHP-Get-Favicon
+# Jerrybendy/get-favicon
 
 获取网站的Favicon图标并显示在你的网页上.
 
 ## 使用方法
 
-直接显示网站图标到浏览器:
-```php
-$favicon = new \Jerrybendy\Favicon();
+1.添加`jerrybendy/get-favicon`到你的`composer.json`文件中, 并执行`composer install`
 
-$favicon->get_favicon('http://blog.icewingcc.com');
+```json
+"require": {
+    "jerrybendy/get-favicon": "*"
+}
+```
+
+
+2.使用以下方式获取网站图标
+
+```php
+<?php
+require "vendor/autoload.php";
+
+
+$favicon = new \Jerrybendy\Favicon\Favicon;
+
+/**
+ * 获取图标并显示在浏览器上
+ */
+$favicon->get_favicon('http://blog.icewingcc.com', false);
 
 ```
+
+
+## 其它用法
 
 `get_favicon`也可以接收可选的第二个参数,默认值是`FALSE`表示直接输出获取到的图标到浏览器. 设置成`TRUE`可以强制返回二进制数据而不显示,以方便在外部做缓存之类的操作.
 
 ```php
-$favicon = new \Jerrybendy\Favicon();
+$favicon = new \Jerrybendy\Favicon\Favicon;
 
-$icon = $favicon->get_favicon('http://blog.icewingcc.com', TRUE);
+$icon = $favicon->get_favicon('http://blog.icewingcc.com', true);
 
-// 设置输出类型是图标
-header('Content-type: image/x-icon');
+// 设置输出header
+foreach ($favicon->getHeader() as $header) {
+    @header($header);
+}
 
 echo $icon;
 ```
