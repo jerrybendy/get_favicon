@@ -73,7 +73,7 @@ class Favicon
      * @return string
      *
      */
-    function get_favicon($url = '', $return = FALSE)
+    function getFavicon($url = '', $return = FALSE)
     {
 
         /**
@@ -87,7 +87,7 @@ class Favicon
         $this->params['origin_url'] = $url;
 
         //解析URL参数
-        $ret = $this->parse_url_host($url);
+        $ret = $this->formatUrl($url);
         if (!$ret) {
             throw new \InvalidArgumentException(__CLASS__ . ': Invalided url', E_WARNING);
         }
@@ -103,7 +103,7 @@ class Favicon
         /**
          * get the favicon bin data
          */
-        $data = $this->get_data();
+        $data = $this->getData();
 
         /**
          * 获取过程结束
@@ -165,7 +165,7 @@ class Favicon
      * 获取最终的Favicon图标数据
      * 此为该类获取图标的核心函数
      */
-    protected function get_data()
+    protected function getData()
     {
 
         //判断data中有没有来自插件写入的内容
@@ -178,7 +178,7 @@ class Favicon
         //从网络获取图标
 
         //从源网址获取HTML内容并解析其中的LINK标签
-        $html = $this->get_file($this->params['origin_url']);
+        $html = $this->getFile($this->params['origin_url']);
 
         if ($html && $html['status'] == 'OK') {
 
@@ -197,9 +197,9 @@ class Favicon
                     if (isset($match_url[2]) && $match_url[2]) {
 
                         //解析HTML中的相对URL 路径
-                        $match_url[2] = $this->filter_relative_url(trim($match_url[2]), $this->params['origin_url']);
+                        $match_url[2] = $this->filterRelativeUrl(trim($match_url[2]), $this->params['origin_url']);
 
-                        $icon = $this->get_file($match_url[2]);
+                        $icon = $this->getFile($match_url[2]);
 
                         if ($icon && $icon['status'] == 'OK') {
 
@@ -221,7 +221,7 @@ class Favicon
 
         //未能从LINK标签中获取图标（可能是网址无法打开，或者指定的文件无法打开，或未定义图标地址）
         //将使用网站根目录的文件代替
-        $data = $this->get_file($this->full_host . '/favicon.ico');
+        $data = $this->getFile($this->full_host . '/favicon.ico');
 
         if ($data && $data['status'] == 'OK') {
             error_log("Success get icon from website root: {$this->full_host}/favicon.ico");
@@ -229,11 +229,11 @@ class Favicon
 
         } else {
             //如果直接取根目录文件返回了301或404，先读取重定向，再从重定向的网址获取
-            $ret = $this->parse_url_host($redirected_url);
+            $ret = $this->formatUrl($redirected_url);
 
             if ($ret) {
                 //最后的尝试，从重定向后的网址根目录获取favicon文件
-                $data = $this->get_file($this->full_host . '/favicon.ico');
+                $data = $this->getFile($this->full_host . '/favicon.ico');
 
                 if ($data && $data['status'] == 'OK') {
                     error_log("Success get icon from redirect file: {$this->full_host}/favicon.ico");
@@ -267,7 +267,7 @@ class Favicon
      * @param $url
      * @return bool|string
      */
-    private function parse_url_host($url)
+    public function formatUrl($url)
     {
         /**
          * 尝试解析URL参数，如果解析失败的话再加上http前缀重新尝试解析
@@ -281,7 +281,6 @@ class Favicon
             if (!preg_match('/^https?:\/\/.*/', $url))
                 $url = 'http://' . $url;
             //解析URL并将结果保存到 $this->url
-            // save parsed result into $this->url
             $parsed_url = parse_url($url);
 
             if ($parsed_url == FALSE) {
@@ -310,7 +309,7 @@ class Favicon
      * @param string $URI 用来参考判断的原始地址
      * @return string 返回修改过的网址
      */
-    private function filter_relative_url($url, $URI = '')
+    private function filterRelativeUrl($url, $URI = '')
     {
         //STEP1: 先去判断URL中是否包含协议，如果包含说明是绝对地址则可以原样返回
         if (strpos($url, '://') !== FALSE) {
@@ -387,14 +386,14 @@ class Favicon
      * @param int    $timeout 超时值，默认为10秒
      * @return string 成功返回获取到的内容，同时设置 $this->content，失败返回FALSE
      */
-    private function get_file($url, $timeout = 10)
+    private function getFile($url, $timeout = 10)
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_FAILONERROR, 1);
         //执行重定向获取
-        $ret = $this->curl_exec_follow($ch, 7);
+        $ret = $this->curlExecFollow($ch, 7);
 
         if ($ret === FALSE) {
             $arr = array(
@@ -426,7 +425,7 @@ class Favicon
      * @param int      $maxredirect 最大允许的重定向次数
      * @return string
      */
-    private function curl_exec_follow(&$ch, $maxredirect = NULL)
+    private function curlExecFollow(&$ch, $maxredirect = NULL)
     {
         $mr = $maxredirect === NULL ? 5 : intval($maxredirect);
         if (ini_get('open_basedir') == '' && ini_get('safe_mode' == 'Off')) {

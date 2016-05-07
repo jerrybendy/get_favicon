@@ -27,4 +27,4 @@ $url = $_GET['url'];
 /**
  * 获取图标并显示在浏览器上
  */
-$favicon->get_favicon($url, false);
+$favicon->getFavicon($url, false);
