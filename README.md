@@ -32,6 +32,37 @@ $favicon->getFavicon('http://blog.icewingcc.com', false);
 
 ## 其它用法
 
+### 默认图标
+默认图标用于在线获取图标失败时返回一个指定的图标文件作为代替。如果没有指定默认图标系统将会在获取失败时返回一个JSON字符串。
+
+```php
+$favicon = new \Jerrybendy\Favicon\Favicon;
+
+$favicon->setDefaultIcon('default-icon.png');
+```
+
+### 文件映射
+文件映射主要用于针对某些网站特殊处理（例如打不开的网站），如果网址能够匹配某个预设的规则，就返回指定的图标资源。
+
+文件映射`setFileMap`函数接收一个数组作为参数，数组的键必须是正则表达式，值则可以对应到一个本地文件或网络文件的路径，你需要保证这个文件是可以正常读取的。
+
+多个匹配规则会按顺序从上到下依次尝试匹配，并在第一次匹配成功后返回。
+
+```php
+$favicon = new \Jerrybendy\Favicon\Favicon;
+
+$favicon->debug_mode = TRUE;
+
+$favicon->setFileMap(array(
+    '/www\.google\.com/i'   => 'http://www.baidu.com/favicon.ico',
+    '/www\.facebook\.com/i' => 'cache/facebook.png',
+));
+
+$favicon->getFavicon('https://www.google.com', false);
+```
+
+在上面的例子中，如果输入的网址匹配了`/www\.google\.com/i`规则，将会返回百度的图标；如果匹配了`/www\.facebook\.com/i`规则将会读取本地已经存在的`facebook.png`文件。
+
 ### 使用缓存
 
 `formatUrl`方法返回一个格式化后的完整的URL字符串, 可以被用作缓存的键名. `Favicon`类中没有内置任何缓存的实现, 所以需要自己根据实际情况选择不同的缓存方式.
@@ -41,6 +72,17 @@ $favicon->getFavicon('http://blog.icewingcc.com', false);
 [demo/use-cache.php](demo/use-cache.php)中的示例代码演示了如何添加和使用缓存.
 
 
+
+### 调试模式
+打开调试模式将会在系统的错误日志中输出一些信息，可以用来查看程序的运行时间、资源占用以及读取图标的来源等信息。因为输出是通过PHP内置的`error_log`函数实现的，所以可能需要通过PHP系统的错误日志去查看，或者`php_error.log`中。如果是用命令行`php -S`参数启动可以直接在控制台中看到日志内容。
+
+打开调试模式：
+
+```php
+$favicon = new \Jerrybendy\Favicon\Favicon;
+
+$favicon->debug_mode = TRUE;
+```
 
 ## LICENSE
 

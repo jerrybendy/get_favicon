@@ -28,6 +28,16 @@ class Favicon
 {
 
     /**
+     * 是否使用调试模式，默认不启用
+     * 可以通过修改此变量的值以启用调试，将会在控制台中
+     * 或错误日志中输出一些运行相关的信息
+     *
+     * @var bool
+     */
+    public $debug_mode = FALSE;
+
+
+    /**
      * 保存传入的参数,其中:
      *
      *    origin_url:     保存传入的url参数的原始字符串信息
@@ -62,6 +72,21 @@ class Favicon
      */
     private $_last_memory_usage = 0;
 
+    /**
+     * 文件映射，用于在规则匹配时直接返回内容
+     *
+     * @var array
+     */
+    private $_file_map = [];
+
+
+    /**
+     * 默认图标，如果设置了此文件将会在请求失败时返回这个图标
+     *
+     * @var string
+     */
+    private $_default_icon = '';
+
 
     /**
      * 获取网站Favicon并输出
@@ -73,7 +98,7 @@ class Favicon
      * @return string
      *
      */
-    function getFavicon($url = '', $return = FALSE)
+    public function getFavicon($url = '', $return = FALSE)
     {
 
         /**
@@ -97,7 +122,7 @@ class Favicon
          */
         $time_start = microtime(TRUE);
 
-        error_log('Begin to get icon, ' . $url);
+        $this->_log_message('Begin to get icon, ' . $url);
 
 
         /**
@@ -114,20 +139,25 @@ class Favicon
 
         $this->_last_memory_usage = ((!function_exists('memory_get_usage')) ? '0' : round(memory_get_usage() / 1024 / 1024, 2)) . 'MB';
 
-        error_log('Get icon complate, spent time ' . $this->_last_time_spend . 's, Memory_usage ' . $this->_last_memory_usage);
+        $this->_log_message('Get icon complate, spent time ' . $this->_last_time_spend . 's, Memory_usage ' . $this->_last_memory_usage);
 
         /**
          * 设置输出Header信息
          * Output common header
          *
-         * @since V2.1.4 2015-02-09
          */
+
+        if ($data === FALSE && $this->_default_icon) {
+            $data = @file_get_contents($this->_default_icon);
+        }
+
+
         if ($return) {
             return $data;
 
         } else {
 
-            if ($data) {
+            if ($data !== FALSE) {
 
                 foreach ($this->getHeader() as $header) {
                     @header($header);
@@ -141,7 +171,7 @@ class Favicon
             }
         }
 
-        return null;
+        return NULL;
     }
 
 
@@ -160,17 +190,50 @@ class Favicon
     }
 
 
-    //-------------------------------------------------------------------------------------------------
+    /**
+     * 设置一组正则表达式到文件的映射，
+     * 用于在规则匹配成功时直接从本地或指定的URL处获取内容并返回
+     *
+     * @param array $map 映射内容必须是   正则表达式  =>  文件路径  的数组，
+     *                   文件通过 file_get_contents 函数读取，所以可以是本地文件或网络文件路径，
+     *                   但必须要保证对应的文件是一定能被读取的
+     * @return $this
+     */
+    public function setFileMap(array $map)
+    {
+        $this->_file_map = $map;
+
+        return $this;
+    }
+
+
+    /**
+     * @param string $filePath
+     * @return $this
+     */
+    public function setDefaultIcon($filePath)
+    {
+        $this->_default_icon = $filePath;
+
+        return $this;
+    }
+
+
     /**
      * 获取最终的Favicon图标数据
      * 此为该类获取图标的核心函数
+     *
+     * @return bool|string
      */
     protected function getData()
     {
 
+        // 尝试匹配映射
+        $this->data = $this->_match_file_map();
+
         //判断data中有没有来自插件写入的内容
-        if ($this->data != NULL) {
-            error_log('Get icon from static file cache, ' . $this->full_host);
+        if ($this->data !== NULL) {
+            $this->_log_message('Get icon from static file map, ' . $this->full_host);
 
             return $this->data;
         }
@@ -203,7 +266,7 @@ class Favicon
 
                         if ($icon && $icon['status'] == 'OK') {
 
-                            error_log("Success get icon from {$this->params['origin_url']}, icon url is {$match_url[2]}");
+                            $this->_log_message("Success get icon from {$this->params['origin_url']}, icon url is {$match_url[2]}");
 
                             $this->data = $icon['data'];
                         }
@@ -224,7 +287,7 @@ class Favicon
         $data = $this->getFile($this->full_host . '/favicon.ico');
 
         if ($data && $data['status'] == 'OK') {
-            error_log("Success get icon from website root: {$this->full_host}/favicon.ico");
+            $this->_log_message("Success get icon from website root: {$this->full_host}/favicon.ico");
             $this->data = $data['data'];
 
         } else {
@@ -236,7 +299,7 @@ class Favicon
                 $data = $this->getFile($this->full_host . '/favicon.ico');
 
                 if ($data && $data['status'] == 'OK') {
-                    error_log("Success get icon from redirect file: {$this->full_host}/favicon.ico");
+                    $this->_log_message("Success get icon from redirect file: {$this->full_host}/favicon.ico");
                     $this->data = $data['data'];
                 }
 
@@ -246,19 +309,15 @@ class Favicon
 
         if ($this->data == NULL) {
             //各个方法都试过了，还是获取不到。。。
-            // 返回默认文件
-            error_log("Cannot get icon from {$this->params['origin_url']}");
-            $this->data = @file_get_contents(dirname(__FILE__) . '/icons/default.png');
+            $this->_log_message("Cannot get icon from {$this->params['origin_url']}");
+
+            return FALSE;
         }
 
         return $this->data;
     }
 
 
-
-
-
-    //-------------------------------------------------------------------------------------------------
 
     /**
      * 解析一个完整的URL中并返回其中的协议、域名和端口部分
@@ -298,7 +357,6 @@ class Favicon
         return $this->full_host;
     }
 
-    //-------------------------------------------------------------------------------------------------
 
     /**
      * 把从HTML源码中获取的相对路径转换成绝对路径
@@ -378,7 +436,6 @@ class Favicon
     }
 
 
-    #----------------------------------------------------------------
     /**
      * 从指定URL获取文件
      *
@@ -416,6 +473,7 @@ class Favicon
 
         return $arr;
     }
+
 
     /**
      * 使用跟综重定向的方式查找被301/302跳转后的实际地址，并执行curl_exec
@@ -473,6 +531,36 @@ class Favicon
         return curl_exec($ch);
     }
 
+
+    /**
+     * 在设定的映射条件中循环并尝试匹配每一条规则，
+     * 在条件匹配时返回对应的文件内容
+     *
+     * @return null|string
+     */
+    private function _match_file_map()
+    {
+        foreach ($this->_file_map as $rule => $file) {
+            if (preg_match($rule, $this->full_host)) {
+                return @file_get_contents($file);
+            }
+        }
+
+        return NULL;
+    }
+
+
+    /**
+     * 如果开启了调试模式，将会在控制台或错误日志中输出一些信息
+     *
+     * @param $message
+     */
+    private function _log_message($message)
+    {
+        if ($this->debug_mode) {
+            error_log($message);
+        }
+    }
 
 }
 

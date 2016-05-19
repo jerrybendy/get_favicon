@@ -1,3 +1,2 @@
-*.log
-Favicon/logs/*.php
 vendor
+test
