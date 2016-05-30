@@ -2,6 +2,11 @@
 
 获取网站的Favicon图标并显示在你的网页上.
 
+[![Latest Stable Version](https://poser.pugx.org/jerrybendy/get-favicon/version)](https://packagist.org/packages/jerrybendy/get-favicon)
+[![Latest Unstable Version](https://poser.pugx.org/jerrybendy/get-favicon/v/unstable)](//packagist.org/packages/jerrybendy/get-favicon)
+[![Total Downloads](https://poser.pugx.org/jerrybendy/get-favicon/downloads)](https://packagist.org/packages/jerrybendy/get-favicon)
+[![License](https://poser.pugx.org/jerrybendy/get-favicon/license)](https://packagist.org/packages/jerrybendy/get-favicon)
+
 ## 使用方法
 
 1.添加`jerrybendy/get-favicon`到你的`composer.json`文件中

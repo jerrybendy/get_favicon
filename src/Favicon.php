@@ -378,9 +378,16 @@ class Favicon
         $URI_part = parse_url($URI);
         if ($URI_part == FALSE)
             return FALSE;
+
         $URI_root = $URI_part['scheme'] . '://' . $URI_part['host'] . (isset($URI_part['port']) ? ':' . $URI_part['port'] : '');
 
         //STEP3: 如果URL以左斜线开头，表示位于根目录
+
+        // 如果URL以 // 开头,表示是省略协议的绝对路径,可以添加协议后返回
+        if (substr($url, 0, 2) === '//') {
+            return $URI_part['scheme'] . ':' . $url;
+        }
+
         if (strpos($url, '/') === 0) {
             return $URI_root . $url;
         }
