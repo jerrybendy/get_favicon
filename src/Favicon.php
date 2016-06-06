@@ -516,6 +516,15 @@ class Favicon
                         if ($code == 301 || $code == 302) {
                             preg_match('/Location:(.*?)\n/i', $header, $matches);
                             $newurl = trim(array_pop($matches));
+
+                            /**
+                             * 这里由于部分网站返回的 Location 的值可能是相对网址, 所以还需要做一步
+                             * 转换成完整地址的操作
+                             *
+                             * @since v2.2.2
+                             */
+                            $newurl = $this->filterRelativeUrl($newurl, $this->params['origin_url']);
+
                         } else {
                             $code = 0;
                         }
