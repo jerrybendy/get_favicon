@@ -412,8 +412,11 @@ class Favicon
         $URI_full_dir = ltrim($URI_dir . '/' . $url, '/');
         $URL_arr = explode('/', $URI_full_dir);
 
-        if ($URL_arr[0] == '..')
-            return FALSE;
+        // 这里为了解决有些网站在根目录下的文件也使用 ../img/favicon.ico 这种形式的错误,
+        // 对这种本来不合理的路径予以通过, 并忽略掉前面的两个点 (没错, 我说的是 gruntjs 的官网)
+        if ($URL_arr[0] == '..') {
+            array_shift($URL_arr);
+        }
 
         //因为数组的第一个元素不可能为'..'，所以这里从第二个元素可以循环
         $dst_arr = $URL_arr;  //拷贝一个副本，用于最后组合URL
@@ -496,6 +499,7 @@ class Favicon
         if (ini_get('open_basedir') == '' && ini_get('safe_mode' == 'Off')) {
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, $mr > 0);
             curl_setopt($ch, CURLOPT_MAXREDIRS, $mr);
+
         } else {
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, FALSE);
             if ($mr > 0) {
@@ -506,6 +510,7 @@ class Favicon
                 curl_setopt($rch, CURLOPT_NOBODY, TRUE);
                 curl_setopt($rch, CURLOPT_FORBID_REUSE, FALSE);
                 curl_setopt($rch, CURLOPT_RETURNTRANSFER, TRUE);
+
                 do {
                     curl_setopt($rch, CURLOPT_URL, $newurl);
                     $header = curl_exec($rch);
